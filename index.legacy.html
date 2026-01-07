@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Portal - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="auth-card">
+            <div class="brand-header">
+                <div class="brand-logo">BP</div>
+                <h2 id="form-title">Welcome Back</h2>
+                <p class="subtitle">Please enter your details to sign in.</p>
+            </div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" id="login-acc" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-pass" required>
+                </div>
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+
+            <form id="signup-form" class="hidden">
+                <div class="form-group">
+                    <label>Choose Account Number</label>
+                    <input type="text" id="signup-acc" required>
+                </div>
+                <div class="form-group">
+                    <label>Create Password</label>
+                    <input type="password" id="signup-pass" required>
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+
+            <a id="toggle-form" class="toggle-link" onclick="toggleForm()">Don't have an account? Create one</a>
+        </div>
+    </div>
+
+    <script src="database.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Simple logic for the HTML page
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const title = document.getElementById('form-title');
+        const link = document.getElementById('toggle-form');
+
+        function toggleForm() {
+            if (loginForm.classList.contains('hidden')) {
+                // Show Login
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                title.textContent = "Welcome Back";
+                link.textContent = "Don't have an account? Create one";
+            } else {
+                // Show Signup
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                title.textContent = "Create Account";
+                link.textContent = "Already have an account? Login";
+            }
+        }
+
+        loginForm.onsubmit = function (e) {
+            e.preventDefault(); // Stop reload
+            const acc = document.getElementById('login-acc').value;
+            const pass = document.getElementById('login-pass').value;
+            login(acc, pass); // Call simple function
+        };
+
+        signupForm.onsubmit = function (e) {
+            e.preventDefault();
+            const acc = document.getElementById('signup-acc').value;
+            const pass = document.getElementById('signup-pass').value;
+            if (signup(acc, pass)) {
+                toggleForm(); // Switch back to login
+            }
+        };
+    </script>
+</body>
+
+</html>
