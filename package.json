@@ -2,13 +2,15 @@
   "name": "my_rwd",
   "version": "1.0.0",
   "description": "Hey! So for now, we've set up a simple \"mock database\" inside `database.js`.",
-  "main": "database.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "keywords": [],
   "author": "",
