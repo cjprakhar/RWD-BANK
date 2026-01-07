@@ -11,7 +11,6 @@ const PORT = 3001;
 
 app.use(cors());
 app.use(bodyParser.json());
-// Serve static files from the build directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
 const DB_FILE = path.join(__dirname, 'database_new.json');
@@ -78,7 +77,6 @@ app.post('/api/transactions', (req, res) => {
 
     if (!db.transactions[accountNumber]) db.transactions[accountNumber] = [];
 
-    // Validation
     const senderTx = db.transactions[accountNumber];
     const senderBal = senderTx.length > 0 ? senderTx[0].runningBalance : 0;
 
@@ -86,7 +84,6 @@ app.post('/api/transactions', (req, res) => {
         return res.status(400).json({ success: false, message: 'Insufficient funds' });
     }
 
-    // Prepare Sender Transaction
     let newSenderBal = type === 'credit' ? senderBal + val : senderBal - val;
     const senderEntry = {
         date: new Date().toLocaleDateString(),
@@ -97,7 +94,6 @@ app.post('/api/transactions', (req, res) => {
     };
     db.transactions[accountNumber].unshift(senderEntry);
 
-    // Handle P2P Transfer (if recipient exists)
     if (recipientAccount && type === 'debit') {
         const recipientExists = db.users.find(u => u.accountNumber === recipientAccount);
         if (recipientExists) {
@@ -122,7 +118,6 @@ app.post('/api/transactions', (req, res) => {
     res.json({ success: true, transaction: senderEntry });
 });
 
-// Handle React routing, return all requests to React app
 app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });

@@ -24,8 +24,114 @@ ChartJS.register(
     Legend
 );
 
-// Use relative path for production, localhost for dev if needed (but proxy is better)
-const API_URL = '/api';
+
+
+const STORAGE_KEY_USERS = 'bank_users_db';
+const STORAGE_KEY_TXS = 'bank_txs_db';
+
+const getDiff = () => {
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]');
+    const txs = JSON.parse(localStorage.getItem(STORAGE_KEY_TXS) || '{}');
+    return { users, txs };
+};
+
+const saveDiff = (users, txs) => {
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+    localStorage.setItem(STORAGE_KEY_TXS, JSON.stringify(txs));
+};
+
+// Initial Seed
+if (!localStorage.getItem(STORAGE_KEY_USERS)) {
+    saveDiff(
+        [{ name: 'Demo User', accountNumber: '12345', password: '123' }],
+        { '12345': [{ date: new Date().toLocaleDateString(), description: 'Welcome Bonus', amount: 1000, type: 'credit', runningBalance: 1000 }] }
+    );
+}
+
+const mockApi = {
+    login: async (accountNumber, password) => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const { users } = getDiff();
+                const user = users.find(u => u.accountNumber === accountNumber && u.password === password);
+                if (user) resolve({ success: true, user });
+                else resolve({ success: false, message: 'Invalid credentials. Try: 12345 / 123' });
+            }, 500);
+        });
+    },
+    signup: async (name, accountNumber, password) => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const { users, txs } = getDiff();
+                if (users.find(u => u.accountNumber === accountNumber)) {
+                    resolve({ success: false, message: 'Account already exists' });
+                } else {
+                    const newUser = { name, accountNumber, password };
+                    users.push(newUser);
+                    txs[accountNumber] = [];
+                    saveDiff(users, txs);
+                    resolve({ success: true, user: newUser });
+                }
+            }, 500);
+        });
+    },
+    getTransactions: async (accountNumber) => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const { txs } = getDiff();
+                resolve(txs[accountNumber] || []);
+            }, 300);
+        });
+    },
+    addTransaction: async ({ accountNumber, description, amount, type, recipientAccount }) => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const { users, txs } = getDiff();
+                if (!txs[accountNumber]) txs[accountNumber] = [];
+
+                const userTx = txs[accountNumber];
+                const balance = userTx.length > 0 ? userTx[0].runningBalance : 0;
+                const val = parseFloat(amount);
+
+                if (type === 'debit' && balance < val) {
+                    resolve({ success: false, message: 'Insufficient funds' });
+                    return;
+                }
+
+                let newBal = type === 'credit' ? balance + val : balance - val;
+                const newTx = {
+                    date: new Date().toLocaleDateString(),
+                    description,
+                    amount: val,
+                    type,
+                    runningBalance: newBal
+                };
+
+                userTx.unshift(newTx);
+
+                // Handle P2P
+                if (type === 'debit' && recipientAccount) {
+                    if (users.find(u => u.accountNumber === recipientAccount)) {
+                        if (!txs[recipientAccount]) txs[recipientAccount] = [];
+                        const recipientBal = txs[recipientAccount].length > 0 ? txs[recipientAccount][0].runningBalance : 0;
+                        const recTx = {
+                            date: new Date().toLocaleDateString(),
+                            description: `Received from ${accountNumber}`,
+                            amount: val,
+                            type: 'credit',
+                            runningBalance: recipientBal + val
+                        };
+                        txs[recipientAccount].unshift(recTx);
+                    }
+                }
+
+                saveDiff(users, txs);
+                resolve({ success: true });
+            }, 500);
+        });
+    }
+};
+
 const CURRENT_USER_KEY = 'bank_current_user';
 const SETTINGS_KEY = 'user_settings';
 
@@ -33,7 +139,6 @@ export default function App() {
     const [user, setUser] = useState(null);
     const [theme, setTheme] = useState('light');
     const [view, setView] = useState('dashboard');
-
 
     useEffect(() => {
         const savedUser = localStorage.getItem(CURRENT_USER_KEY);
@@ -117,15 +222,13 @@ function Auth({ onLogin }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const endpoint = isLogin ? '/login' : '/signup';
-
         try {
-            const res = await fetch(`${API_URL}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accountNumber, password, name: isLogin ? undefined : name }),
-            });
-            const data = await res.json();
+            let data;
+            if (isLogin) {
+                data = await mockApi.login(accountNumber, password);
+            } else {
+                data = await mockApi.signup(name, accountNumber, password);
+            }
 
             if (data.success) {
                 if (isLogin) {
@@ -136,11 +239,11 @@ function Auth({ onLogin }) {
                     setPassword('');
                 }
             } else {
-                toast.error(data.message || (isLogin ? 'Wrong credentials' : 'Signup failed'));
+                toast.error(data.message);
             }
         } catch (err) {
             console.error(err);
-            toast.error('Server error. Ensure Node.js backend is running.');
+            toast.error('Error processing request');
         }
     };
 
@@ -153,6 +256,11 @@ function Auth({ onLogin }) {
                     <p className="subtitle">
                         {isLogin ? 'Please enter your details to sign in.' : 'Enter details to create a new account.'}
                     </p>
+                    <div style={{ padding: '0.5rem', background: '#fef3c7', fontSize: '0.8rem', marginBottom: '1rem', border: '1px solid #000' }}>
+                        <strong>Demo Credentials:</strong><br />
+                        Account: 12345<br />
+                        Pass: 123
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
@@ -204,15 +312,6 @@ function Auth({ onLogin }) {
 function Dashboard({ user, onLogout, theme, onProfile }) {
     const [transactions, setTransactions] = useState([]);
     const [balance, setBalance] = useState(0);
-    // ... (omitting unchanged lines for brevity if possible, or usually we just replace the chunk)
-    // Wait, I can't use "..." in replacement content. I must be precise.
-    // I will target the function signature and the header part.
-    // But the function signature and header are far apart.
-    // I'll update the component structure in two chunks using multi_replace_file_content if I could, but I'm locked to replace_file_content or multi.
-    // I will use replace_file_content for the whole Dashboard start.
-
-    // Actually, I'll update the signature first, then the header.
-    // Step 1: Update signature
     const [loading, setLoading] = useState(true);
 
     const [desc, setDesc] = useState('');
@@ -261,9 +360,7 @@ function Dashboard({ user, onLogout, theme, onProfile }) {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/transactions/${user.accountNumber}`);
-            const list = await res.json();
-
+            const list = await mockApi.getTransactions(user.accountNumber);
             if (list.length > 0) {
                 setBalance(list[0].runningBalance);
                 setTransactions(list);
@@ -273,7 +370,6 @@ function Dashboard({ user, onLogout, theme, onProfile }) {
             }
         } catch (err) {
             console.error(err);
-
         } finally {
             setLoading(false);
         }
@@ -288,26 +384,19 @@ function Dashboard({ user, onLogout, theme, onProfile }) {
     const handleTransactionSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${API_URL}/transactions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    accountNumber: user.accountNumber,
-                    description: desc,
-                    amount: parseFloat(amount),
-                    type,
-                    recipientAccount: type === 'debit' && recipient ? recipient : undefined
-                })
+            const data = await mockApi.addTransaction({
+                accountNumber: user.accountNumber,
+                description: desc,
+                amount: parseFloat(amount),
+                type,
+                recipientAccount: type === 'debit' && recipient ? recipient : undefined
             });
-            const data = await res.json();
 
             if (data.success) {
-
                 setDesc('');
                 setAmount('');
                 setRecipient('');
                 setType('credit');
-
                 fetchData();
                 toast.success('Transaction successful!');
             } else {
@@ -473,8 +562,8 @@ function Profile({ user, theme, onLogout }) {
             </div>
         </div>
     );
-
 }
+
 
 function VirtualCard({ user }) {
     return (

@@ -43,6 +43,13 @@
     "1234": [
       {
         "date": "7/1/2026",
+        "description": "darshan wedding",
+        "amount": 100000,
+        "type": "debit",
+        "runningBalance": 1111111011111
+      },
+      {
+        "date": "7/1/2026",
         "description": "rg",
         "amount": 1111111111111,
         "type": "credit",

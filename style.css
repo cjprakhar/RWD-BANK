@@ -4,11 +4,8 @@
     --text-color: #000000;
     --border-color: #000000;
     --accent-color: #ffde00;
-    /* Yellow */
     --secondary-accent: #ff6b6b;
-    /* Red */
     --success-color: #4ec9b0;
-    /* Teal */
     --shadow-offset: 4px;
 }
 
@@ -38,7 +35,6 @@ body.dark-mode {
     --secondary-accent: #e91e63;
 }
 
-/* Brutalist Components */
 .auth-card,
 .balance-card,
 .transaction-list,
@@ -157,7 +153,6 @@ select:focus {
     font-weight: 700;
 }
 
-/* Sidebar Layout */
 .sidebar {
     position: fixed;
     top: 0;
@@ -232,7 +227,6 @@ select:focus {
     }
 }
 
-/* Table */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -262,7 +256,6 @@ th {
     font-weight: 900;
 }
 
-/* Misc */
 .theme-toggle {
     position: fixed;
     bottom: 2rem;
@@ -285,7 +278,6 @@ th {
     border-radius: 0 !important;
 }
 
-/* Profile */
 .profile-details {
     margin-top: 2rem;
 }
@@ -304,7 +296,6 @@ th {
     margin-top: 0.5rem;
 }
 
-/* Container for Login */
 .container {
     width: 100%;
     max-width: 480px;
