@@ -12,6 +12,10 @@ import {
     Legend,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import Chatbot from './Chatbot';
+import FinancialAdvice from './FinancialAdvice';
+import InvestmentPlans from './InvestmentPlans';
+import AdminDashboard from './AdminDashboard';
 import './style.css';
 
 ChartJS.register(
@@ -139,6 +143,11 @@ export default function App() {
     const [user, setUser] = useState(null);
     const [theme, setTheme] = useState('light');
     const [view, setView] = useState('dashboard');
+    const [config, setConfig] = useState({
+        enableChatbot: true,
+        enableAdvice: true,
+        enableInvestments: true
+    });
 
     useEffect(() => {
         const savedUser = localStorage.getItem(CURRENT_USER_KEY);
@@ -154,6 +163,9 @@ export default function App() {
         } else {
             applyTheme('light');
         }
+
+        const savedConfig = JSON.parse(localStorage.getItem('bank_site_config'));
+        if (savedConfig) setConfig(savedConfig);
     }, []);
 
     const applyTheme = (newTheme) => {
@@ -183,16 +195,20 @@ export default function App() {
         localStorage.removeItem(CURRENT_USER_KEY);
     };
 
+    if (user && user.isAdmin) {
+        return <AdminDashboard onLogout={handleLogout} theme={theme} />;
+    }
+
     return (
         <>
-            <div className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+            <div className="theme-toggle" onClick={toggleTheme}>
                 {theme === 'dark' ? '☀' : '☾'}
             </div>
             <ToastContainer position="bottom-right" theme={theme} />
 
             {user ? (
                 <div style={{ display: 'flex' }}>
-                    <Sidebar view={view} setView={setView} onLogout={handleLogout} />
+                    <Sidebar view={view} setView={setView} onLogout={handleLogout} config={config} />
                     <div className="main-content-with-sidebar">
                         <div className="auth-card" style={{ marginBottom: '2rem', textAlign: 'left' }}>
                             <h2>{view === 'dashboard' ? 'Dashboard' : 'My Profile'}</h2>
@@ -201,6 +217,12 @@ export default function App() {
 
                         {view === 'profile' ? (
                             <Profile user={user} theme={theme} onLogout={handleLogout} />
+                        ) : view === 'chatbot' && config.enableChatbot ? (
+                            <Chatbot user={user} theme={theme} />
+                        ) : view === 'advice' && config.enableAdvice ? (
+                            <FinancialAdvice user={user} theme={theme} />
+                        ) : view === 'invest' && config.enableInvestments ? (
+                            <InvestmentPlans theme={theme} />
                         ) : (
                             <Dashboard user={user} onLogout={handleLogout} theme={theme} />
                         )}
@@ -225,6 +247,10 @@ function Auth({ onLogin }) {
         try {
             let data;
             if (isLogin) {
+                if (accountNumber === 'admin' && password === 'admin123') {
+                    onLogin({ name: 'Admin', isAdmin: true });
+                    return;
+                }
                 data = await mockApi.login(accountNumber, password);
             } else {
                 data = await mockApi.signup(name, accountNumber, password);
@@ -258,8 +284,8 @@ function Auth({ onLogin }) {
                     </p>
                     <div style={{ padding: '0.5rem', background: '#fef3c7', fontSize: '0.8rem', marginBottom: '1rem', border: '1px solid #000' }}>
                         <strong>Demo Credentials:</strong><br />
-                        Account: 12345<br />
-                        Pass: 123
+                        User: 12345 / 123<br />
+                        Admin: admin / admin123
                     </div>
                 </div>
 
@@ -510,11 +536,15 @@ function Dashboard({ user, onLogout, theme, onProfile }) {
     );
 }
 
-function Sidebar({ view, setView, onLogout }) {
+function Sidebar({ view, setView, onLogout, config }) {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard' },
         { id: 'profile', label: 'Profile' }
     ];
+
+    if (config.enableInvestments) navItems.push({ id: 'invest', label: 'Investments' });
+    if (config.enableAdvice) navItems.push({ id: 'advice', label: 'Financial Advice' });
+    if (config.enableChatbot) navItems.push({ id: 'chatbot', label: 'Support Chat' });
 
     return (
         <div className="sidebar">
